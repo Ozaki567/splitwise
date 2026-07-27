@@ -21,6 +21,8 @@
         --shadow-hard: 5px 5px 0 var(--line);
         --shadow-soft: 0 18px 42px rgba(36, 33, 29, 0.13);
         --radius: 8px;
+        --font-sans: "Source Han Sans SC", "思源黑体", "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       }
 
       * {
@@ -40,7 +42,7 @@
           linear-gradient(135deg, rgba(12, 124, 112, 0.16), transparent 38%),
           repeating-linear-gradient(90deg, rgba(36, 33, 29, 0.035) 0 1px, transparent 1px 20px),
           var(--paper);
-        font-family: ui-serif, Georgia, "Times New Roman", "Noto Serif SC", serif;
+        font-family: var(--font-sans);
       }
 
       body::before {
@@ -86,14 +88,14 @@
       .form-head span,
       .settlement-list span {
         color: var(--muted);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.82rem;
       }
 
       .eyebrow {
         margin: 0 0 7px;
         color: var(--accent-dark);
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-family: var(--font-mono);
         font-weight: 800;
         text-transform: uppercase;
       }
@@ -118,7 +120,7 @@
       .lede {
         margin-top: 12px;
         color: var(--soft-ink);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.95rem;
       }
 
@@ -225,7 +227,7 @@
         border-radius: 50%;
         background: var(--gold);
         color: var(--ink);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.82rem;
         font-weight: 900;
       }
@@ -306,7 +308,7 @@
 
       #split-error {
         color: var(--rose);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.78rem;
         text-align: right;
       }
@@ -401,7 +403,7 @@
 
       .share-row span {
         color: var(--soft-ink);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.86rem;
         font-weight: 800;
       }
@@ -422,7 +424,7 @@
 
       .share-row em {
         color: var(--muted);
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-family: var(--font-mono);
         font-size: 0.78rem;
         font-style: normal;
       }
@@ -532,7 +534,7 @@
 
       .balance-card em {
         color: var(--muted);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.75rem;
         font-style: normal;
       }
@@ -626,7 +628,7 @@
         top: 0;
         z-index: 1;
         background: var(--gold);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.78rem;
       }
 
@@ -657,7 +659,7 @@
         display: inline-block;
         max-width: 260px;
         color: var(--soft-ink);
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-sans);
         font-size: 0.83rem;
         line-height: 1.35;
       }
@@ -757,7 +759,7 @@
           display: block;
           margin-bottom: 3px;
           color: var(--muted);
-          font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-family: var(--font-sans);
           font-size: 0.72rem;
         }
 
