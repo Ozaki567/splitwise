@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Splitwise</title>
+    <style>
+      :root {
+        --ink: #181715;
+        --soft-ink: #3d3934;
+        --muted: #776f65;
+        --paper: #f5efe4;
+        --panel: #fffaf1;
+        --panel-strong: #fff3cf;
+        --line: #24211d;
+        --accent: #0c7c70;
+        --accent-dark: #07534c;
+        --rose: #b9412c;
+        --sky: #d8ecf5;
+        --gold: #f1c84b;
+        --shadow-hard: 5px 5px 0 var(--line);
+        --shadow-soft: 0 18px 42px rgba(36, 33, 29, 0.13);
+        --radius: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        color-scheme: light;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 86% 4%, rgba(185, 65, 44, 0.18), transparent 26%),
+          linear-gradient(135deg, rgba(12, 124, 112, 0.16), transparent 38%),
+          repeating-linear-gradient(90deg, rgba(36, 33, 29, 0.035) 0 1px, transparent 1px 20px),
+          var(--paper);
+        font-family: ui-serif, Georgia, "Times New Roman", "Noto Serif SC", serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: linear-gradient(rgba(36, 33, 29, 0.035) 1px, transparent 1px);
+        background-size: 100% 32px;
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 78%);
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .app-shell {
+        width: min(100%, 980px);
+        margin: 0 auto;
+        padding: max(18px, env(safe-area-inset-top)) 14px 34px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 8px 0 14px;
+      }
+
+      .eyebrow,
+      label span,
+      .section-head span,
+      .empty-state span,
+      .balance-card span,
+      .total-tile span,
+      .form-head span,
+      .settlement-list span {
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.82rem;
+      }
+
+      .eyebrow {
+        margin: 0 0 7px;
+        color: var(--accent-dark);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 7em;
+        font-size: clamp(2.45rem, 13vw, 5.25rem);
+        line-height: 0.91;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        font-size: 1.06rem;
+      }
+
+      .lede {
+        margin-top: 12px;
+        color: var(--soft-ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.95rem;
+      }
+
+      .icon-button,
+      .text-button,
+      .primary-button,
+      .delete-row,
+      .settle-button {
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      .icon-button {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 auto;
+        place-items: center;
+        background: var(--panel);
+        font-size: 1.75rem;
+        line-height: 1;
+        box-shadow: var(--shadow-hard);
+      }
+
+      .totals-board,
+      .balance-grid {
+        display: grid;
+        gap: 9px;
+      }
+
+      .balance-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .total-tile,
+      .balance-card {
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255, 250, 241, 0.9);
+        box-shadow: var(--shadow-hard);
+      }
+
+      .totals-board {
+        grid-template-columns: 1fr 1fr;
+        margin: 0 0 16px;
+      }
+
+      .total-tile {
+        min-height: 92px;
+        display: grid;
+        align-content: space-between;
+        padding: 12px;
+        background: var(--sky);
+      }
+
+      .total-tile.cny {
+        background: var(--panel-strong);
+      }
+
+      .total-tile strong {
+        font-size: clamp(1.45rem, 8vw, 2.6rem);
+        line-height: 1;
+      }
+
+      .entry-form,
+      .balance-panel,
+      .ledger-section {
+        margin-top: 16px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255, 250, 241, 0.94);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .entry-form {
+        display: grid;
+        gap: 13px;
+        padding: 14px;
+      }
+
+      .form-head,
+      .section-head,
+      .split-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .member-stack {
+        display: flex;
+        isolation: isolate;
+      }
+
+      .member-stack span {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        margin-left: -6px;
+        place-items: center;
+        border: 1.5px solid var(--line);
+        border-radius: 50%;
+        background: var(--gold);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.82rem;
+        font-weight: 900;
+      }
+
+      .member-stack span:first-child {
+        margin-left: 0;
+        background: var(--accent);
+        color: #fffaf1;
+      }
+
+      .member-stack span:last-child {
+        background: var(--rose);
+        color: #fffaf1;
+      }
+
+      label {
+        display: grid;
+        gap: 7px;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 50px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: #fffdf8;
+        color: var(--ink);
+        padding: 0 12px;
+        outline: none;
+      }
+
+      .quick-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.9fr) minmax(0, 0.72fr) minmax(0, 0.85fr) minmax(0, 0.78fr);
+        gap: 6px;
+        align-items: end;
+      }
+
+      .quick-row label {
+        min-width: 0;
+      }
+
+      .quick-row input,
+      .quick-row select {
+        min-height: 44px;
+        padding: 0 6px;
+        font-size: 0.9rem;
+      }
+
+      input[type="checkbox"],
+      input[type="radio"] {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+
+      input::placeholder {
+        color: rgba(119, 111, 101, 0.72);
+      }
+
+      input:focus,
+      select:focus,
+      button:focus-visible {
+        outline: 3px solid rgba(12, 124, 112, 0.23);
+        outline-offset: 2px;
+      }
+
+      .split-box {
+        display: grid;
+        gap: 12px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(216, 236, 245, 0.35);
+        padding: 12px;
+      }
+
+      #split-error {
+        color: var(--rose);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.78rem;
+        text-align: right;
+      }
+
+      .method-tabs,
+      .participant-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .method-tabs label,
+      .participant-grid label {
+        position: relative;
+        display: flex;
+        min-height: 42px;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: #fffdf8;
+        cursor: pointer;
+      }
+
+      .participant-grid label:nth-child(1) {
+        background: rgba(12, 124, 112, 0.2);
+      }
+
+      .participant-grid label:nth-child(2) {
+        background: rgba(241, 200, 75, 0.38);
+      }
+
+      .participant-grid label:nth-child(3) {
+        background: rgba(185, 65, 44, 0.18);
+      }
+
+      .method-tabs input,
+      .participant-grid input {
+        position: absolute;
+        opacity: 0;
+      }
+
+      .method-tabs label:has(input:checked) {
+        background: var(--accent);
+        color: #fffaf1;
+        box-shadow: 3px 3px 0 var(--line);
+      }
+
+      .participant-grid label:has(input:checked) {
+        color: var(--ink);
+        box-shadow: 3px 3px 0 var(--line);
+      }
+
+      .participant-grid label:nth-child(1):has(input:checked) {
+        background: var(--accent);
+        color: #fffaf1;
+      }
+
+      .participant-grid label:nth-child(2):has(input:checked) {
+        background: var(--gold);
+      }
+
+      .participant-grid label:nth-child(3):has(input:checked) {
+        background: var(--rose);
+        color: #fffaf1;
+      }
+
+      .method-tabs span,
+      .participant-grid span {
+        color: inherit;
+        font-size: 0.86rem;
+        font-weight: 800;
+      }
+
+      .share-editor {
+        display: grid;
+        gap: 8px;
+      }
+
+      .share-row {
+        display: grid;
+        grid-template-columns: minmax(72px, 1fr) minmax(0, 1.25fr) auto;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        border: 1.5px solid rgba(36, 33, 29, 0.42);
+        border-radius: var(--radius);
+        background: rgba(255, 253, 248, 0.76);
+        padding: 7px 9px;
+      }
+
+      .share-row span {
+        color: var(--soft-ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.86rem;
+        font-weight: 800;
+      }
+
+      .share-row input {
+        min-height: 38px;
+        text-align: right;
+      }
+
+      .share-row.auto {
+        background: rgba(241, 200, 75, 0.22);
+      }
+
+      .share-row.auto input {
+        border-style: dashed;
+        color: var(--muted);
+      }
+
+      .share-row em {
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.78rem;
+        font-style: normal;
+      }
+
+      .file-drop {
+        position: relative;
+        min-height: 74px;
+        border: 1.5px dashed var(--line);
+        border-radius: var(--radius);
+        background: linear-gradient(135deg, rgba(241, 200, 75, 0.28), rgba(255, 253, 248, 0.8));
+        padding: 12px;
+        overflow: hidden;
+      }
+
+      .file-drop input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .file-drop b {
+        align-self: end;
+        font-size: 1.02rem;
+      }
+
+      .receipt-preview {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 82px 1fr;
+        align-items: center;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: #fffdf8;
+        padding: 8px;
+      }
+
+      .receipt-preview img {
+        width: 82px;
+        height: 82px;
+        object-fit: cover;
+        border: 1px solid rgba(36, 33, 29, 0.25);
+        border-radius: 6px;
+      }
+
+      .text-button {
+        min-height: 40px;
+        background: var(--panel);
+        padding: 0 12px;
+        justify-self: start;
+      }
+
+      .primary-button {
+        min-height: 54px;
+        background: var(--accent);
+        color: #fffdf8;
+        font-weight: 900;
+        box-shadow: var(--shadow-hard);
+      }
+
+      .primary-button:active,
+      .icon-button:active {
+        transform: translate(3px, 3px);
+        box-shadow: 2px 2px 0 var(--line);
+      }
+
+      .balance-panel,
+      .ledger-section {
+        padding: 14px;
+      }
+
+      .section-head {
+        margin-bottom: 12px;
+      }
+
+      .exchange-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: end;
+        margin-bottom: 12px;
+      }
+
+      .exchange-row input {
+        min-height: 42px;
+      }
+
+      .settle-button {
+        min-height: 42px;
+        background: var(--gold);
+        font-weight: 900;
+        padding: 0 14px;
+        box-shadow: 3px 3px 0 var(--line);
+      }
+
+      .balance-card {
+        display: grid;
+        gap: 9px;
+        min-width: 0;
+        padding: 10px;
+      }
+
+      .balance-card strong {
+        font-size: 1.12rem;
+        line-height: 1.2;
+      }
+
+      .balance-card em {
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.75rem;
+        font-style: normal;
+      }
+
+      .balance-lines {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 4px;
+        align-items: baseline;
+      }
+
+      .balance-lines span {
+        font-size: 0.72rem;
+      }
+
+      .balance-lines b {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        font-size: clamp(0.78rem, 3.1vw, 1rem);
+        line-height: 1.1;
+        text-align: right;
+      }
+
+      .balance-card.positive {
+        background: rgba(12, 124, 112, 0.1);
+      }
+
+      .balance-card.positive strong {
+        color: var(--accent-dark);
+      }
+
+      .balance-card.negative {
+        background: rgba(185, 65, 44, 0.09);
+      }
+
+      .balance-card.negative strong {
+        color: var(--rose);
+      }
+
+      .settlement-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .settlement-list:empty {
+        display: none;
+      }
+
+      .settlement-list div,
+      .settlement-list > span,
+      .settlement-list > strong {
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: #fffdf8;
+        padding: 10px;
+      }
+
+      .settlement-list div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .table-wrap {
+        position: relative;
+        overflow-x: auto;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: #fffdf8;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      table {
+        width: 100%;
+        min-width: 930px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid rgba(36, 33, 29, 0.16);
+        padding: 11px 10px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--gold);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.78rem;
+      }
+
+      td {
+        font-size: 0.95rem;
+      }
+
+      tbody tr:nth-child(even) {
+        background: rgba(216, 236, 245, 0.28);
+      }
+
+      .receipt-thumb {
+        display: block;
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgba(36, 33, 29, 0.3);
+        border-radius: 6px;
+        object-fit: cover;
+      }
+
+      .delete-row {
+        min-height: 34px;
+        background: transparent;
+        padding: 0 10px;
+      }
+
+      .split-summary {
+        display: inline-block;
+        max-width: 260px;
+        color: var(--soft-ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.83rem;
+        line-height: 1.35;
+      }
+
+      .empty-state {
+        display: grid;
+        place-items: center;
+        gap: 6px;
+        padding: 26px 14px;
+        text-align: center;
+      }
+
+      .reveal {
+        animation: lift-in 520ms ease both;
+      }
+
+      .reveal:nth-of-type(2) {
+        animation-delay: 70ms;
+      }
+
+      .reveal:nth-of-type(3) {
+        animation-delay: 120ms;
+      }
+
+      .reveal:nth-of-type(4) {
+        animation-delay: 170ms;
+      }
+
+      @keyframes lift-in {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 560px) {
+        .ledger-section {
+          overflow: hidden;
+        }
+
+        .table-wrap {
+          overflow: visible;
+          border: 0;
+          background: transparent;
+        }
+
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td {
+          display: block;
+        }
+
+        table {
+          min-width: 0;
+        }
+
+        thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+
+        tbody {
+          display: grid;
+          gap: 10px;
+        }
+
+        tbody tr {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px 10px;
+          border: 1.5px solid var(--line);
+          border-radius: var(--radius);
+          background: #fffdf8;
+          box-shadow: var(--shadow-hard);
+          padding: 10px;
+        }
+
+        td {
+          min-width: 0;
+          border: 0;
+          padding: 0;
+          font-size: 0.94rem;
+        }
+
+        td::before {
+          content: attr(data-label);
+          display: block;
+          margin-bottom: 3px;
+          color: var(--muted);
+          font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-size: 0.72rem;
+        }
+
+        td:nth-child(4),
+        td:nth-child(7),
+        td:nth-child(9) {
+          grid-column: 1 / -1;
+        }
+
+        .delete-row {
+          width: 100%;
+        }
+      }
+
+      @media (min-width: 680px) {
+        .app-shell {
+          padding: 30px 24px 52px;
+        }
+
+        .quick-row {
+          grid-template-columns: 1.1fr 0.95fr 0.72fr 0.86fr 0.76fr;
+          gap: 8px;
+        }
+
+        .share-editor {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .share-row {
+          grid-template-columns: 1fr;
+        }
+
+        .share-row input {
+          text-align: left;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar reveal" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Shared Expense</p>
+          <h1 id="page-title">Splitwise</h1>
+          <p class="lede">选择币种、分类和分摊方式，记录每一笔共同消费。</p>
+        </div>
+        <button class="icon-button" id="clear-data" type="button" aria-label="清空账本" title="清空账本">
+          <span aria-hidden="true">×</span>
+        </button>
+      </section>
+
+      <section class="totals-board reveal" aria-label="总额概览">
+        <div class="total-tile">
+          <span>美元总消费</span>
+          <strong id="total-usd">$0.00</strong>
+        </div>
+        <div class="total-tile cny">
+          <span>人民币总消费</span>
+          <strong id="total-cny">¥0.00</strong>
+        </div>
+      </section>
+
+      <form class="entry-form reveal" id="entry-form">
+        <div class="form-head">
+          <div>
+            <h2>新增消费</h2>
+            <span id="split-preview">3 人平摊</span>
+          </div>
+          <div class="member-stack" aria-label="参与成员">
+            <span>谢</span>
+            <span>蓝</span>
+            <span>王</span>
+          </div>
+        </div>
+
+        <div class="quick-row">
+          <label>
+            <span>分类</span>
+            <select id="category" name="category">
+              <option>餐厅</option>
+              <option>小吃</option>
+              <option>水饮</option>
+              <option>机票</option>
+              <option>公交</option>
+              <option>打车</option>
+              <option>住宿</option>
+              <option>纪念品</option>
+              <option>购物</option>
+              <option>景点门票</option>
+              <option>娱乐</option>
+            </select>
+          </label>
+          <label>
+            <span>支付方式</span>
+            <select id="payment" name="payment">
+              <option>现金</option>
+              <option>信用卡</option>
+              <option>支付宝</option>
+              <option>微信</option>
+              <option>充值卡</option>
+              <option>其他</option>
+            </select>
+          </label>
+          <label>
+            <span>付款人</span>
+            <select id="payer" name="payer">
+              <option>谢</option>
+              <option>蓝</option>
+              <option>王</option>
+            </select>
+          </label>
+          <label>
+            <span>金额</span>
+            <input id="amount" name="amount" type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" placeholder="200" required />
+          </label>
+          <label>
+            <span>币种</span>
+            <select id="currency" name="currency">
+              <option value="USD" selected>美元</option>
+              <option value="CNY">人民币</option>
+            </select>
+          </label>
+        </div>
+
+        <section class="split-box" aria-labelledby="split-title">
+          <div class="split-head">
+            <h2 id="split-title">分摊方式</h2>
+            <span id="split-error" role="alert"></span>
+          </div>
+
+          <div class="method-tabs" id="split-methods">
+            <label>
+              <input type="radio" name="splitMethod" value="equal" checked />
+              <span>平摊</span>
+            </label>
+            <label>
+              <input type="radio" name="splitMethod" value="amount" />
+              <span>按金额</span>
+            </label>
+            <label>
+              <input type="radio" name="splitMethod" value="percent" />
+              <span>按比例</span>
+            </label>
+          </div>
+
+          <div class="participant-grid" id="participants" aria-label="参与者">
+            <label>
+              <input type="checkbox" value="谢" checked />
+              <span>谢</span>
+            </label>
+            <label>
+              <input type="checkbox" value="蓝" checked />
+              <span>蓝</span>
+            </label>
+            <label>
+              <input type="checkbox" value="王" checked />
+              <span>王</span>
+            </label>
+          </div>
+
+          <div class="share-editor" id="share-editor"></div>
+        </section>
+
+        <label>
+          <span>备注</span>
+          <input id="note" name="note" type="text" placeholder="可填写店名、用途、同行说明..." />
+        </label>
+
+        <label class="file-drop">
+          <span>消费凭证图片</span>
+          <input id="receipt" name="receipt" type="file" accept="image/*" />
+          <b>点这里上传凭证</b>
+        </label>
+
+        <div class="receipt-preview" id="receipt-preview" hidden>
+          <img id="receipt-image" alt="消费凭证预览" />
+          <button class="text-button" id="remove-receipt" type="button">移除图片</button>
+        </div>
+
+        <button class="primary-button" type="submit">记一笔消费</button>
+      </form>
+
+      <section class="balance-panel reveal" aria-labelledby="balance-title">
+        <div class="section-head">
+          <h2 id="balance-title">当前应收应付</h2>
+          <span id="entry-count">0 笔</span>
+        </div>
+        <div class="exchange-row">
+          <label>
+            <span>汇率 美元 → 人民币</span>
+            <input id="exchange-rate" type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" value="6.78" />
+          </label>
+          <button class="settle-button" id="settle-button" type="button">结算</button>
+        </div>
+        <div class="balance-grid" id="balance-grid"></div>
+        <div class="settlement-list" id="settlement-list" aria-live="polite"></div>
+      </section>
+
+      <section class="ledger-section reveal" aria-labelledby="ledger-title">
+        <div class="section-head">
+          <h2 id="ledger-title">主账本表格</h2>
+          <span>按所选方式分摊</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>分类</th>
+                <th>支付</th>
+                <th>备注</th>
+                <th>付款人</th>
+                <th>金额</th>
+                <th>分摊</th>
+                <th>凭证</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-body"></tbody>
+          </table>
+          <div class="empty-state" id="empty-state">
+            <strong>还没有记录</strong>
+            <span>先填一笔消费，账本会按你选择的方式生成分摊结果。</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const members = ["谢", "蓝", "王"];
+      const memberAliases = { 蓝旻颉: "蓝", 王迪: "王" };
+      const storageKey = "shared-ledger-v2";
+
+      const form = document.querySelector("#entry-form");
+      const categoryInput = document.querySelector("#category");
+      const paymentInput = document.querySelector("#payment");
+      const noteInput = document.querySelector("#note");
+      const payerInput = document.querySelector("#payer");
+      const amountInput = document.querySelector("#amount");
+      const currencyInput = document.querySelector("#currency");
+      const receiptInput = document.querySelector("#receipt");
+      const receiptPreview = document.querySelector("#receipt-preview");
+      const receiptImage = document.querySelector("#receipt-image");
+      const removeReceiptButton = document.querySelector("#remove-receipt");
+      const splitPreview = document.querySelector("#split-preview");
+      const splitError = document.querySelector("#split-error");
+      const splitMethods = document.querySelector("#split-methods");
+      const participants = document.querySelector("#participants");
+      const shareEditor = document.querySelector("#share-editor");
+      const ledgerBody = document.querySelector("#ledger-body");
+      const emptyState = document.querySelector("#empty-state");
+      const balanceGrid = document.querySelector("#balance-grid");
+      const entryCount = document.querySelector("#entry-count");
+      const clearDataButton = document.querySelector("#clear-data");
+      const totalUsd = document.querySelector("#total-usd");
+      const totalCny = document.querySelector("#total-cny");
+      const exchangeRateInput = document.querySelector("#exchange-rate");
+      const settleButton = document.querySelector("#settle-button");
+      const settlementList = document.querySelector("#settlement-list");
+
+      let entries = loadEntries();
+      let pendingReceipt = "";
+
+      function normalizeMember(member) {
+        return memberAliases[member] || member;
+      }
+
+      function normalizeEntry(entry) {
+        const shares = {};
+        Object.entries(entry.shares || {}).forEach(([member, value]) => {
+          const normalized = normalizeMember(member);
+          shares[normalized] = (shares[normalized] || 0) + Number(value || 0);
+        });
+        return {
+          ...entry,
+          payment: entry.payment || "其他",
+          note: entry.note || entry.title || "",
+          payer: normalizeMember(entry.payer),
+          participants: (entry.participants || members).map(normalizeMember),
+          shares: Object.keys(shares).length ? shares : entry.shares,
+        };
+      }
+
+      function loadEntries() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(storageKey)) || JSON.parse(localStorage.getItem("shared-ledger-v1")) || [];
+          return stored.map(normalizeEntry);
+        } catch {
+          return [];
+        }
+      }
+
+      function saveEntries() {
+        localStorage.setItem(storageKey, JSON.stringify(entries));
+      }
+
+      function getAmount() {
+        return Number(amountInput.value);
+      }
+
+      function getCurrency() {
+        return currencyInput.value;
+      }
+
+      function getMethod() {
+        return form.elements.splitMethod.value;
+      }
+
+      function getSelectedMembers() {
+        return [...participants.querySelectorAll("input:checked")].map((input) => input.value);
+      }
+
+      function money(value, currency) {
+        const amount = Number(value || 0);
+        const symbol = currency === "CNY" ? "¥" : "$";
+        return `${amount < 0 ? "-" : ""}${symbol}${Math.abs(amount).toFixed(2)}`;
+      }
+
+      function currencyUnit(currency) {
+        return currency === "CNY" ? "¥" : "$";
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => {
+          const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+          return entities[char];
+        });
+      }
+
+      function createId() {
+        return window.crypto && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+
+      function today() {
+        return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit" }).format(new Date());
+      }
+
+      function labelForMethod(method) {
+        return { equal: "平摊", amount: "按金额", percent: "按比例" }[method] || "平摊";
+      }
+
+      function keepNumericInput(input) {
+        input.addEventListener("beforeinput", (event) => {
+          if (!event.data) return;
+          const nextValue = `${input.value.slice(0, input.selectionStart)}${event.data}${input.value.slice(input.selectionEnd)}`;
+          if (!/^\d*\.?\d*$/.test(nextValue)) event.preventDefault();
+        });
+      }
+
+      function readShareValue(member) {
+        const input = [...shareEditor.querySelectorAll("[data-share-member]")].find((field) => field.dataset.shareMember === member);
+        return input && input.value.trim() ? Number(input.value) : null;
+      }
+
+      function getAutoMember(selected) {
+        if (selected.length <= 1) return selected[0];
+        const blankMembers = selected.filter((member) => readShareValue(member) === null);
+        return blankMembers.length === 1 ? blankMembers[0] : null;
+      }
+
+      function calculateShares({ silent = false } = {}) {
+        const amount = getAmount();
+        const currency = getCurrency();
+        const method = getMethod();
+        const selected = getSelectedMembers();
+        const shares = {};
+
+        members.forEach((member) => {
+          shares[member] = 0;
+        });
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+          if (!silent) splitError.textContent = "请输入有效金额";
+          return null;
+        }
+
+        if (!selected.length) {
+          if (!silent) splitError.textContent = "至少选择 1 位参与者";
+          return null;
+        }
+
+        if (method === "equal") {
+          selected.forEach((member) => {
+            shares[member] = amount / selected.length;
+          });
+        }
+
+        if (method === "amount") {
+          const autoMember = getAutoMember(selected);
+          let used = 0;
+          selected.forEach((member) => {
+            if (member === autoMember) return;
+            shares[member] = readShareValue(member) || 0;
+            used += shares[member];
+          });
+          if (autoMember) shares[autoMember] = amount - used;
+        }
+
+        if (method === "percent") {
+          const autoMember = getAutoMember(selected);
+          let usedPercent = 0;
+          selected.forEach((member) => {
+            if (member === autoMember) return;
+            const percent = readShareValue(member) || 0;
+            usedPercent += percent;
+            shares[member] = amount * (percent / 100);
+          });
+          if (autoMember) shares[autoMember] = amount * ((100 - usedPercent) / 100);
+        }
+
+        if ((method === "amount" || method === "percent") && !getAutoMember(selected)) {
+          const target = method === "amount" ? amount : 100;
+          const used = selected.reduce((sum, member) => sum + (method === "amount" ? shares[member] : readShareValue(member) || 0), 0);
+          if (Math.abs(used - target) > 0.01) {
+            if (!silent) splitError.textContent = method === "amount" ? "请留空 1 人自动补差，或让金额合计等于总金额" : "请留空 1 人自动补差，或让比例合计等于 100%";
+            return null;
+          }
+        }
+
+        const hasNegativeShare = selected.some((member) => shares[member] < -0.000001);
+        if (hasNegativeShare) {
+          if (!silent) splitError.textContent = method === "amount" ? "已输入金额不能超过总金额" : "已输入比例不能超过 100%";
+          return null;
+        }
+
+        splitError.textContent = "";
+        return { amount, currency, method, participants: selected, shares };
+      }
+
+      function updateShareEditor() {
+        const selected = getSelectedMembers();
+        const method = getMethod();
+        const amount = getAmount();
+        const currency = getCurrency();
+
+        if (method === "equal") {
+          shareEditor.innerHTML = selected
+            .map((member) => {
+              const share = Number.isFinite(amount) && amount > 0 && selected.length ? amount / selected.length : 0;
+              return `<div class="share-row auto"><span>${member}</span><strong>${money(share, currency)}</strong></div>`;
+            })
+            .join("");
+          updateSplitPreview();
+          return;
+        }
+
+        shareEditor.innerHTML = selected
+          .map((member) => {
+            const unit = method === "amount" ? currencyUnit(currency) : "%";
+            return `<label class="share-row" data-share-row="${member}"><span>${member}</span><input data-share-member="${member}" type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" placeholder="留空自动" /><em>${unit}</em></label>`;
+          })
+          .join("");
+
+        shareEditor.querySelectorAll("input").forEach((input) => {
+          keepNumericInput(input);
+          input.addEventListener("input", updateSplitPreview);
+        });
+        updateSplitPreview();
+      }
+
+      function updateSplitPreview() {
+        const result = calculateShares({ silent: true });
+        const selected = getSelectedMembers();
+        const method = getMethod();
+        const amount = getAmount();
+        const currency = getCurrency();
+
+        if (!selected.length) {
+          splitPreview.textContent = "请选择参与者";
+          return;
+        }
+
+        if (!Number.isFinite(amount) || amount <= 0 || !result) {
+          splitPreview.textContent = `${selected.length} 人 · ${labelForMethod(method)}`;
+          return;
+        }
+
+        shareEditor.querySelectorAll(".share-row").forEach((row) => {
+          const member = row.dataset.shareRow;
+          const input = row.querySelector("input");
+          const isAuto = member === getAutoMember(selected);
+          row.classList.toggle("auto", isAuto);
+          if (input && isAuto) {
+            input.placeholder = method === "percent" ? `${Math.max(0, (result.shares[member] / amount) * 100).toFixed(2)}%` : money(Math.max(0, result.shares[member]), currency);
+          } else if (input) {
+            input.placeholder = "0";
+          }
+        });
+
+        if (method === "equal") {
+          splitPreview.textContent = `${selected.length} 人平摊 · 每人 ${money(amount / selected.length, currency)}`;
+          return;
+        }
+
+        splitPreview.textContent = `${selected.length} 人 · ${labelForMethod(method)}`;
+      }
+
+      function setReceiptPreview(src) {
+        pendingReceipt = src;
+        receiptImage.src = src;
+        receiptPreview.hidden = !src;
+      }
+
+      function entryShares(entry) {
+        if (entry.shares) return entry.shares;
+        const fallback = {};
+        const selected = entry.participants || members;
+        members.forEach((member) => {
+          fallback[member] = selected.includes(member) ? entry.amount / selected.length : 0;
+        });
+        return fallback;
+      }
+
+      function getExchangeRate() {
+        const rate = Number(exchangeRateInput.value);
+        return Number.isFinite(rate) && rate > 0 ? rate : 6.78;
+      }
+
+      function renderBalances() {
+        const balances = {};
+        const totals = { USD: 0, CNY: 0 };
+        members.forEach((member) => {
+          balances[member] = { USD: 0, CNY: 0 };
+        });
+
+        entries.forEach((entry) => {
+          totals[entry.currency] += entry.amount;
+          const shares = entryShares(entry);
+          members.forEach((member) => {
+            balances[member][entry.currency] -= shares[member] || 0;
+          });
+          balances[entry.payer][entry.currency] += entry.amount;
+        });
+
+        balanceGrid.innerHTML = members
+          .map((member) => {
+            const usd = balances[member].USD;
+            const cny = balances[member].CNY;
+            const totalMood = usd * getExchangeRate() + cny > 0 ? "positive" : usd * getExchangeRate() + cny < 0 ? "negative" : "";
+            return `<article class="balance-card ${totalMood}"><strong>${member}</strong><div class="balance-lines"><span>人民币</span><b>${money(cny, "CNY")}</b><span>美元</span><b>${money(usd, "USD")}</b></div><em>${totalMood === "positive" ? "应收" : totalMood === "negative" ? "应付" : "已平"}</em></article>`;
+          })
+          .join("");
+
+        totalUsd.textContent = money(totals.USD, "USD");
+        totalCny.textContent = money(totals.CNY, "CNY");
+        if (settlementList.dataset.active === "true") renderSettlement();
+      }
+
+      function currentBalancesInCny() {
+        const rate = getExchangeRate();
+        const balances = {};
+        members.forEach((member) => {
+          balances[member] = 0;
+        });
+        entries.forEach((entry) => {
+          const multiplier = entry.currency === "USD" ? rate : 1;
+          const shares = entryShares(entry);
+          members.forEach((member) => {
+            balances[member] -= (shares[member] || 0) * multiplier;
+          });
+          balances[entry.payer] += entry.amount * multiplier;
+        });
+        return balances;
+      }
+
+      function settlementTransfers() {
+        const balances = currentBalancesInCny();
+        const debtors = [];
+        const creditors = [];
+
+        Object.entries(balances).forEach(([member, value]) => {
+          const rounded = Math.round(value * 100) / 100;
+          if (rounded < -0.01) debtors.push({ member, amount: Math.abs(rounded) });
+          if (rounded > 0.01) creditors.push({ member, amount: rounded });
+        });
+
+        const transfers = [];
+        let debtorIndex = 0;
+        let creditorIndex = 0;
+        while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
+          const debtor = debtors[debtorIndex];
+          const creditor = creditors[creditorIndex];
+          const amount = Math.min(debtor.amount, creditor.amount);
+          transfers.push({ from: debtor.member, to: creditor.member, amount });
+          debtor.amount = Math.round((debtor.amount - amount) * 100) / 100;
+          creditor.amount = Math.round((creditor.amount - amount) * 100) / 100;
+          if (debtor.amount <= 0.01) debtorIndex += 1;
+          if (creditor.amount <= 0.01) creditorIndex += 1;
+        }
+
+        return transfers;
+      }
+
+      function renderSettlement() {
+        settlementList.dataset.active = "true";
+        const transfers = settlementTransfers();
+        if (!entries.length) {
+          settlementList.innerHTML = `<span>暂无可结算记录</span>`;
+          return;
+        }
+        if (!transfers.length) {
+          settlementList.innerHTML = `<strong>已结清</strong><span>按当前汇率无需转账</span>`;
+          return;
+        }
+        settlementList.innerHTML = transfers.map((transfer) => `<div><strong>${transfer.from} → ${transfer.to}</strong><span>${money(transfer.amount, "CNY")}</span></div>`).join("");
+      }
+
+      function renderShareSummary(entry) {
+        const shares = entryShares(entry);
+        const detail = (entry.participants || members).map((member) => `${member} ${money(shares[member] || 0, entry.currency)}`).join(" / ");
+        return `${labelForMethod(entry.method)}：${detail}`;
+      }
+
+      function renderLedger() {
+        entryCount.textContent = `${entries.length} 笔`;
+        emptyState.hidden = entries.length > 0;
+        ledgerBody.innerHTML = entries
+          .map((entry) => {
+            const safeNote = escapeHtml(entry.note || "");
+            const safeCategory = escapeHtml(entry.category || "未分类");
+            const safePayment = escapeHtml(entry.payment || "其他");
+            const safePayer = escapeHtml(entry.payer);
+            const receipt = entry.receipt ? `<a href="${entry.receipt}" target="_blank" rel="noreferrer"><img class="receipt-thumb" src="${entry.receipt}" alt="${safeCategory} 凭证" /></a>` : "无";
+            return `<tr><td data-label="日期">${entry.date}</td><td data-label="分类">${safeCategory}</td><td data-label="支付">${safePayment}</td><td data-label="备注">${safeNote || "无"}</td><td data-label="付款人">${safePayer}</td><td data-label="金额">${money(entry.amount, entry.currency)}</td><td data-label="分摊"><span class="split-summary">${escapeHtml(renderShareSummary(entry))}</span></td><td data-label="凭证">${receipt}</td><td data-label="操作"><button class="delete-row" type="button" data-id="${entry.id}">删除</button></td></tr>`;
+          })
+          .join("");
+      }
+
+      function render() {
+        renderBalances();
+        renderLedger();
+      }
+
+      keepNumericInput(amountInput);
+      keepNumericInput(exchangeRateInput);
+
+      amountInput.addEventListener("input", updateShareEditor);
+      currencyInput.addEventListener("change", updateShareEditor);
+      exchangeRateInput.addEventListener("input", renderBalances);
+      settleButton.addEventListener("click", renderSettlement);
+      splitMethods.addEventListener("change", updateShareEditor);
+      participants.addEventListener("change", updateShareEditor);
+
+      receiptInput.addEventListener("change", () => {
+        const file = receiptInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.addEventListener("load", () => setReceiptPreview(reader.result));
+        reader.readAsDataURL(file);
+      });
+
+      removeReceiptButton.addEventListener("click", () => {
+        receiptInput.value = "";
+        setReceiptPreview("");
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const split = calculateShares();
+        if (!split) return;
+
+        entries.unshift({
+          id: createId(),
+          date: today(),
+          category: categoryInput.value,
+          payment: paymentInput.value,
+          note: noteInput.value.trim(),
+          payer: payerInput.value,
+          amount: split.amount,
+          currency: split.currency,
+          method: split.method,
+          participants: split.participants,
+          shares: split.shares,
+          receipt: pendingReceipt,
+        });
+
+        saveEntries();
+        form.reset();
+        setReceiptPreview("");
+        updateShareEditor();
+        render();
+      });
+
+      ledgerBody.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-id]");
+        if (!button) return;
+        entries = entries.filter((entry) => entry.id !== button.dataset.id);
+        saveEntries();
+        render();
+      });
+
+      clearDataButton.addEventListener("click", () => {
+        if (!entries.length) return;
+        const confirmed = window.confirm("确定清空所有账本记录吗？");
+        if (!confirmed) return;
+        entries = [];
+        saveEntries();
+        render();
+      });
+
+      updateShareEditor();
+      render();
+    </script>
+  </body>
+</html>
