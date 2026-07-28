@@ -874,23 +874,53 @@
       }
 
       @media (max-width: 760px) {
-        .quick-row {
+        .totals-board {
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
+          gap: 8px;
         }
 
-        .quick-row label:nth-child(1),
-        .quick-row label:nth-child(2),
-        .quick-row label:nth-child(4) {
-          grid-column: 1 / -1;
+        .total-tile {
+          min-height: 78px;
+          padding: 10px;
+        }
+
+        .total-tile strong {
+          font-size: clamp(1.35rem, 9vw, 2rem);
+        }
+
+        .quick-row {
+          grid-template-columns: 1.08fr 0.88fr 0.68fr 0.82fr 0.72fr;
+          gap: 5px;
+        }
+
+        .quick-row input,
+        .quick-row select {
+          height: 40px;
+          min-height: 40px;
+          padding: 0 5px;
+          font-size: 0.82rem;
         }
 
         .balance-grid {
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 7px;
+        }
+
+        .balance-card {
+          padding: 8px;
+        }
+
+        .balance-lines b {
+          font-size: clamp(0.78rem, 3.6vw, 1rem);
         }
 
         .ledger-tools {
-          grid-template-columns: 1fr;
+          grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+          gap: 8px;
+        }
+
+        .ledger-section table {
+          min-width: 760px;
         }
       }
 
@@ -903,15 +933,6 @@
           padding: 24px 18px;
         }
 
-        .totals-board,
-        .exchange-row {
-          grid-template-columns: 1fr;
-        }
-
-        .method-tabs {
-          grid-template-columns: 1fr;
-        }
-
         .participant-grid {
           gap: 6px;
         }
@@ -920,79 +941,12 @@
           width: 100%;
         }
 
-        .ledger-section {
-          overflow: hidden;
-        }
-
         .table-wrap {
           overflow: auto;
           max-height: 66vh;
           border: 3px solid var(--line);
           background: rgba(255, 251, 228, 0.72);
           overscroll-behavior: contain;
-        }
-
-        .ledger-section table,
-        .ledger-section thead,
-        .ledger-section tbody,
-        .ledger-section tr,
-        .ledger-section th,
-        .ledger-section td {
-          display: block;
-        }
-
-        .ledger-section table {
-          min-width: 0;
-        }
-
-        .ledger-section thead {
-          position: absolute;
-          width: 1px;
-          height: 1px;
-          overflow: hidden;
-          clip: rect(0 0 0 0);
-        }
-
-        .ledger-section tbody {
-          display: grid;
-          gap: 10px;
-        }
-
-        .ledger-section tbody tr {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px 10px;
-          border: 3px solid var(--line);
-          border-radius: 2px;
-          background: var(--panel);
-          box-shadow: var(--shadow-hard);
-          padding: 10px;
-        }
-
-        .ledger-section td {
-          min-width: 0;
-          border: 0;
-          padding: 0;
-          font-size: 0.94rem;
-        }
-
-        .ledger-section td::before {
-          content: attr(data-label);
-          display: block;
-          margin-bottom: 3px;
-          color: var(--muted);
-          font-family: var(--font-sans);
-          font-size: 0.72rem;
-        }
-
-        .ledger-section td:nth-child(4),
-        .ledger-section td:nth-child(7),
-        .ledger-section td:nth-child(9) {
-          grid-column: 1 / -1;
-        }
-
-        .delete-row {
-          width: 100%;
         }
       }
 
