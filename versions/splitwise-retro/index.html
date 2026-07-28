@@ -1224,8 +1224,6 @@
       </section>
     </main>
 
-    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
     <script>
       const members = ["谢", "蓝", "王"];
       const memberAliases = { 蓝旻颉: "蓝", 王迪: "王" };
@@ -1275,10 +1273,10 @@
       let entries = loadEntries();
       let pendingReceipt = "";
       let receiptProcessing = false;
-      let cloudDb = null;
       let cloudReady = false;
       let applyingCloudSnapshot = false;
       let cloudSnapshotSeen = false;
+      let cloudPollTimer = null;
 
       function normalizeMember(member) {
         return memberAliases[member] || member;
@@ -1322,11 +1320,27 @@
       }
 
       function hasFirebaseConfig() {
-        return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && window.firebase);
+        return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
       }
 
-      function entryCollection() {
-        return cloudDb.collection("splitwiseLedgers").doc(cloudLedgerId).collection("entries");
+      function cloudEntriesUrl(id = "") {
+        const base = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/splitwiseLedgers/${cloudLedgerId}/entries`;
+        return id ? `${base}/${encodeURIComponent(id)}` : base;
+      }
+
+      function entryToFirestoreFields(entry) {
+        return {
+          payload: { stringValue: JSON.stringify(entry) },
+          createdAt: { integerValue: String(Math.round(Number(entry.createdAt) || Date.now())) },
+        };
+      }
+
+      function firestoreDocToEntry(doc, index) {
+        const id = decodeURIComponent(String(doc.name || "").split("/").pop() || "");
+        const payload = doc.fields?.payload?.stringValue;
+        const createdAt = Number(doc.fields?.createdAt?.integerValue || doc.fields?.createdAt?.doubleValue || 0);
+        const parsed = payload ? JSON.parse(payload) : {};
+        return normalizeEntry({ ...parsed, id: parsed.id || id, createdAt: parsed.createdAt || createdAt }, index);
       }
 
       function setSyncStatus(message, state = "local") {
@@ -1334,49 +1348,67 @@
         syncStatus.dataset.state = state;
       }
 
-      function startCloudSync() {
+      async function fetchCloudEntries() {
+        const response = await fetch(cloudEntriesUrl());
+        if (!response.ok) {
+          const detail = await response.json().catch(() => ({}));
+          throw new Error(detail.error?.message || `HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        return (data.documents || []).map(firestoreDocToEntry).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+      }
+
+      async function refreshFromCloud() {
+        if (!cloudReady || applyingCloudSnapshot) return;
+        const cloudEntries = await fetchCloudEntries();
+        if (!cloudSnapshotSeen && !cloudEntries.length && entries.length) {
+          cloudSnapshotSeen = true;
+          setSyncStatus("正在初始化云端账本...", "local");
+          await Promise.all(entries.map(syncEntryToCloud));
+          return;
+        }
+
+        cloudSnapshotSeen = true;
+        applyingCloudSnapshot = true;
+        entries = cloudEntries;
+        saveEntries();
+        applyingCloudSnapshot = false;
+        render();
+        setSyncStatus("云同步已连接", "online");
+      }
+
+      async function startCloudSync() {
         if (!hasFirebaseConfig()) {
           setSyncStatus("本地模式", "local");
           return;
         }
 
         try {
-          firebase.initializeApp(firebaseConfig);
-          cloudDb = firebase.firestore();
           cloudReady = true;
           setSyncStatus("连接云端...", "local");
-          entryCollection()
-            .orderBy("createdAt", "desc")
-            .onSnapshot(
-              (snapshot) => {
-                if (!cloudSnapshotSeen && snapshot.empty && entries.length) {
-                  cloudSnapshotSeen = true;
-                  setSyncStatus("正在初始化云端账本...", "local");
-                  entries.forEach(syncEntryToCloud);
-                  return;
-                }
-                cloudSnapshotSeen = true;
-                applyingCloudSnapshot = true;
-                entries = snapshot.docs.map((doc, index) => normalizeEntry({ id: doc.id, ...doc.data() }, index));
-                saveEntries();
-                applyingCloudSnapshot = false;
-                render();
-                setSyncStatus("云同步已连接", "online");
-              },
-              (error) => {
-                cloudReady = false;
-                setSyncStatus(`同步失败：${error.message || "请检查 Firestore"}`, "error");
-              }
-            );
+          await refreshFromCloud();
+          cloudPollTimer = window.setInterval(() => {
+            refreshFromCloud().catch((error) => {
+              setSyncStatus(`同步失败：${error.message || "请检查 Firestore"}`, "error");
+            });
+          }, 4000);
         } catch (error) {
           cloudReady = false;
+          if (cloudPollTimer) window.clearInterval(cloudPollTimer);
           setSyncStatus(`同步失败：${error.message || "请检查 Firebase 配置"}`, "error");
         }
       }
 
       function syncEntryToCloud(entry) {
-        if (!cloudReady || applyingCloudSnapshot) return;
-        entryCollection().doc(entry.id).set(entry).catch(() => {
+        if (!cloudReady || applyingCloudSnapshot) return Promise.resolve();
+        return fetch(cloudEntriesUrl(entry.id), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: entryToFirestoreFields(entry) }),
+        }).then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          setSyncStatus("云同步已连接", "online");
+        }).catch(() => {
           splitError.textContent = "云同步失败，本机已保存";
           setSyncStatus("写入云端失败", "error");
         });
@@ -1384,7 +1416,10 @@
 
       function deleteEntryFromCloud(id) {
         if (!cloudReady || applyingCloudSnapshot) return;
-        entryCollection().doc(id).delete().catch(() => {
+        fetch(cloudEntriesUrl(id), { method: "DELETE" }).then((response) => {
+          if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
+          setSyncStatus("云同步已连接", "online");
+        }).catch(() => {
           splitError.textContent = "云端删除失败，请稍后重试";
           setSyncStatus("删除云端记录失败", "error");
         });
