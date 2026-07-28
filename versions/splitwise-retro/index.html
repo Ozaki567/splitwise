@@ -1196,10 +1196,21 @@
       </section>
     </main>
 
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
     <script>
       const members = ["谢", "蓝", "王"];
       const memberAliases = { 蓝旻颉: "蓝", 王迪: "王" };
       const storageKey = "shared-ledger-v2";
+      const cloudLedgerId = "trip-ledger";
+      const firebaseConfig = {
+        apiKey: "",
+        authDomain: "",
+        projectId: "",
+        storageBucket: "",
+        messagingSenderId: "",
+        appId: "",
+      };
 
       const form = document.querySelector("#entry-form");
       const categoryInput = document.querySelector("#category");
@@ -1234,6 +1245,10 @@
       let entries = loadEntries();
       let pendingReceipt = "";
       let receiptProcessing = false;
+      let cloudDb = null;
+      let cloudReady = false;
+      let applyingCloudSnapshot = false;
+      let cloudSnapshotSeen = false;
 
       function normalizeMember(member) {
         return memberAliases[member] || member;
@@ -1274,6 +1289,70 @@
           splitError.textContent = "凭证图片过大，已无法保存到浏览器本地账本";
           return false;
         }
+      }
+
+      function hasFirebaseConfig() {
+        return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && window.firebase);
+      }
+
+      function entryCollection() {
+        return cloudDb.collection("splitwiseLedgers").doc(cloudLedgerId).collection("entries");
+      }
+
+      function setSyncStatus(message) {
+        splitPreview.dataset.sync = message;
+      }
+
+      function startCloudSync() {
+        if (!hasFirebaseConfig()) {
+          setSyncStatus("本地模式");
+          return;
+        }
+
+        try {
+          firebase.initializeApp(firebaseConfig);
+          cloudDb = firebase.firestore();
+          cloudReady = true;
+          setSyncStatus("云同步");
+          entryCollection()
+            .orderBy("createdAt", "desc")
+            .onSnapshot(
+              (snapshot) => {
+                if (!cloudSnapshotSeen && snapshot.empty && entries.length) {
+                  cloudSnapshotSeen = true;
+                  entries.forEach(syncEntryToCloud);
+                  return;
+                }
+                cloudSnapshotSeen = true;
+                applyingCloudSnapshot = true;
+                entries = snapshot.docs.map((doc, index) => normalizeEntry({ id: doc.id, ...doc.data() }, index));
+                saveEntries();
+                applyingCloudSnapshot = false;
+                render();
+              },
+              () => {
+                cloudReady = false;
+                setSyncStatus("同步失败，已使用本地账本");
+              }
+            );
+        } catch {
+          cloudReady = false;
+          setSyncStatus("同步失败，已使用本地账本");
+        }
+      }
+
+      function syncEntryToCloud(entry) {
+        if (!cloudReady || applyingCloudSnapshot) return;
+        entryCollection().doc(entry.id).set(entry).catch(() => {
+          splitError.textContent = "云同步失败，本机已保存";
+        });
+      }
+
+      function deleteEntryFromCloud(id) {
+        if (!cloudReady || applyingCloudSnapshot) return;
+        entryCollection().doc(id).delete().catch(() => {
+          splitError.textContent = "云端删除失败，请稍后重试";
+        });
       }
 
       function getAmount() {
@@ -1832,6 +1911,7 @@
           entries = entries.filter((item) => item.id !== entry.id);
           return;
         }
+        syncEntryToCloud(entry);
         form.reset();
         setReceiptPreview("");
         updateShareEditor();
@@ -1850,11 +1930,13 @@
         if (!button) return;
         entries = entries.filter((entry) => entry.id !== button.dataset.id);
         saveEntries();
+        deleteEntryFromCloud(button.dataset.id);
         render();
       });
 
       updateShareEditor();
       render();
+      startCloudSync();
     </script>
   </body>
 </html>
