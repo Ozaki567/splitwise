@@ -1325,7 +1325,8 @@
 
       function cloudEntriesUrl(id = "") {
         const base = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/splitwiseLedgers/${cloudLedgerId}/entries`;
-        return id ? `${base}/${encodeURIComponent(id)}` : base;
+        const url = id ? `${base}/${encodeURIComponent(id)}` : base;
+        return `${url}?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
       }
 
       function entryToFirestoreFields(entry) {
@@ -1348,8 +1349,21 @@
         syncStatus.dataset.state = state;
       }
 
+      async function cloudFetch(url, options = {}) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 8000);
+        try {
+          return await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+          if (error.name === "AbortError") throw new Error("Firestore 连接超时");
+          throw error;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      }
+
       async function fetchCloudEntries() {
-        const response = await fetch(cloudEntriesUrl());
+        const response = await cloudFetch(cloudEntriesUrl());
         if (!response.ok) {
           const detail = await response.json().catch(() => ({}));
           throw new Error(detail.error?.message || `HTTP ${response.status}`);
@@ -1401,7 +1415,7 @@
 
       function syncEntryToCloud(entry) {
         if (!cloudReady || applyingCloudSnapshot) return Promise.resolve();
-        return fetch(cloudEntriesUrl(entry.id), {
+        return cloudFetch(cloudEntriesUrl(entry.id), {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fields: entryToFirestoreFields(entry) }),
@@ -1416,7 +1430,7 @@
 
       function deleteEntryFromCloud(id) {
         if (!cloudReady || applyingCloudSnapshot) return;
-        fetch(cloudEntriesUrl(id), { method: "DELETE" }).then((response) => {
+        cloudFetch(cloudEntriesUrl(id), { method: "DELETE" }).then((response) => {
           if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
           setSyncStatus("云同步已连接", "online");
         }).catch(() => {
