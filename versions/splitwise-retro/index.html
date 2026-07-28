@@ -548,6 +548,12 @@
         box-shadow: var(--shadow-hard);
       }
 
+      .primary-button:disabled {
+        cursor: wait;
+        filter: grayscale(0.3);
+        opacity: 0.72;
+      }
+
       .text-button:hover,
       .delete-row:hover,
       .settle-button:hover,
@@ -1227,6 +1233,7 @@
 
       let entries = loadEntries();
       let pendingReceipt = "";
+      let receiptProcessing = false;
 
       function normalizeMember(member) {
         return memberAliases[member] || member;
@@ -1260,7 +1267,13 @@
       }
 
       function saveEntries() {
-        localStorage.setItem(storageKey, JSON.stringify(entries));
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(entries));
+          return true;
+        } catch {
+          splitError.textContent = "凭证图片过大，已无法保存到浏览器本地账本";
+          return false;
+        }
       }
 
       function getAmount() {
@@ -1483,6 +1496,31 @@
         pendingReceipt = src;
         receiptImage.src = src;
         receiptPreview.hidden = !src;
+      }
+
+      function compressReceiptFile(file) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          const objectUrl = URL.createObjectURL(file);
+          image.addEventListener("load", () => {
+            const maxSide = 900;
+            const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+            canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            const context = canvas.getContext("2d");
+            context.fillStyle = "#fffdf0";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(objectUrl);
+            resolve(canvas.toDataURL("image/jpeg", 0.72));
+          });
+          image.addEventListener("error", () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("receipt image failed"));
+          });
+          image.src = objectUrl;
+        });
       }
 
       function entryShares(entry) {
@@ -1737,12 +1775,26 @@
       });
       ledgerFilterValue.addEventListener("change", renderLedger);
 
-      receiptInput.addEventListener("change", () => {
+      receiptInput.addEventListener("change", async () => {
         const file = receiptInput.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.addEventListener("load", () => setReceiptPreview(reader.result));
-        reader.readAsDataURL(file);
+        receiptProcessing = true;
+        submitEntryButton.disabled = true;
+        submitEntryButton.textContent = "处理图片中...";
+        splitError.textContent = "正在压缩凭证图片";
+        try {
+          const compressedReceipt = await compressReceiptFile(file);
+          setReceiptPreview(compressedReceipt);
+          splitError.textContent = "";
+        } catch {
+          receiptInput.value = "";
+          setReceiptPreview("");
+          splitError.textContent = "凭证图片读取失败，请换一张图片";
+        } finally {
+          receiptProcessing = false;
+          submitEntryButton.disabled = false;
+          submitEntryButton.textContent = "记一笔消费";
+        }
       });
 
       removeReceiptButton.addEventListener("click", () => {
@@ -1751,11 +1803,15 @@
       });
 
       function addEntry() {
+        if (receiptProcessing) {
+          splitError.textContent = "凭证图片还在处理中，请稍等";
+          return;
+        }
         if (typeof form.reportValidity === "function" && !form.reportValidity()) return;
         const split = calculateShares();
         if (!split) return;
 
-        entries.unshift({
+        const entry = {
           id: createId(),
           createdAt: Date.now(),
           date: today(),
@@ -1769,9 +1825,13 @@
           participants: split.participants,
           shares: split.shares,
           receipt: pendingReceipt,
-        });
+        };
 
-        saveEntries();
+        entries.unshift(entry);
+        if (!saveEntries()) {
+          entries = entries.filter((item) => item.id !== entry.id);
+          return;
+        }
         form.reset();
         setReceiptPreview("");
         updateShareEditor();
