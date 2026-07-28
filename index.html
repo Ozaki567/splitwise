@@ -1164,7 +1164,7 @@
           <button class="text-button" id="remove-receipt" type="button">移除图片</button>
         </div>
 
-        <button class="primary-button" type="submit">记一笔消费</button>
+        <button class="primary-button" id="submit-entry" type="button">记一笔消费</button>
       </form>
 
       <section class="balance-panel reveal" aria-labelledby="balance-title">
@@ -1247,6 +1247,7 @@
       const noteInput = document.querySelector("#note");
       const payerInput = document.querySelector("#payer");
       const amountInput = document.querySelector("#amount");
+      const submitEntryButton = document.querySelector("#submit-entry");
       const currencyInput = document.querySelector("#currency");
       const receiptInput = document.querySelector("#receipt");
       const receiptPreview = document.querySelector("#receipt-preview");
@@ -1795,8 +1796,8 @@
         setReceiptPreview("");
       });
 
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
+      function addEntry() {
+        if (typeof form.reportValidity === "function" && !form.reportValidity()) return;
         const split = calculateShares();
         if (!split) return;
 
@@ -1821,6 +1822,13 @@
         setReceiptPreview("");
         updateShareEditor();
         render();
+      }
+
+      submitEntryButton.addEventListener("click", addEntry);
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        addEntry();
       });
 
       ledgerBody.addEventListener("click", (event) => {
