@@ -105,6 +105,33 @@
         border-radius: 2px;
       }
 
+      .sync-pill {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        z-index: 5;
+        max-width: min(280px, calc(100vw - 24px));
+        border: 2px solid var(--line);
+        border-radius: 2px;
+        background: var(--panel-strong);
+        color: var(--ink);
+        padding: 7px 10px;
+        font-family: var(--font-sans);
+        font-size: 0.78rem;
+        font-weight: 900;
+        box-shadow: 4px 4px 0 rgba(20, 34, 46, 0.28);
+      }
+
+      .sync-pill[data-state="online"] {
+        background: var(--accent);
+        color: var(--panel);
+      }
+
+      .sync-pill[data-state="error"] {
+        background: var(--rose);
+        color: var(--panel);
+      }
+
       label span,
       .section-head span,
       .balance-card span,
@@ -992,6 +1019,7 @@
   </head>
   <body>
     <main class="app-shell">
+      <div class="sync-pill" id="sync-status" data-state="local">本地模式</div>
       <section class="topbar reveal" aria-labelledby="page-title">
         <h1 id="page-title">Splitwise</h1>
       </section>
@@ -1225,6 +1253,7 @@
       const receiptPreview = document.querySelector("#receipt-preview");
       const receiptImage = document.querySelector("#receipt-image");
       const removeReceiptButton = document.querySelector("#remove-receipt");
+      const syncStatus = document.querySelector("#sync-status");
       const splitPreview = document.querySelector("#split-preview");
       const splitError = document.querySelector("#split-error");
       const splitMethods = document.querySelector("#split-methods");
@@ -1300,13 +1329,14 @@
         return cloudDb.collection("splitwiseLedgers").doc(cloudLedgerId).collection("entries");
       }
 
-      function setSyncStatus(message) {
-        splitPreview.dataset.sync = message;
+      function setSyncStatus(message, state = "local") {
+        syncStatus.textContent = message;
+        syncStatus.dataset.state = state;
       }
 
       function startCloudSync() {
         if (!hasFirebaseConfig()) {
-          setSyncStatus("本地模式");
+          setSyncStatus("本地模式", "local");
           return;
         }
 
@@ -1314,13 +1344,14 @@
           firebase.initializeApp(firebaseConfig);
           cloudDb = firebase.firestore();
           cloudReady = true;
-          setSyncStatus("云同步");
+          setSyncStatus("连接云端...", "local");
           entryCollection()
             .orderBy("createdAt", "desc")
             .onSnapshot(
               (snapshot) => {
                 if (!cloudSnapshotSeen && snapshot.empty && entries.length) {
                   cloudSnapshotSeen = true;
+                  setSyncStatus("正在初始化云端账本...", "local");
                   entries.forEach(syncEntryToCloud);
                   return;
                 }
@@ -1330,15 +1361,16 @@
                 saveEntries();
                 applyingCloudSnapshot = false;
                 render();
+                setSyncStatus("云同步已连接", "online");
               },
-              () => {
+              (error) => {
                 cloudReady = false;
-                setSyncStatus("同步失败，已使用本地账本");
+                setSyncStatus(`同步失败：${error.message || "请检查 Firestore"}`, "error");
               }
             );
-        } catch {
+        } catch (error) {
           cloudReady = false;
-          setSyncStatus("同步失败，已使用本地账本");
+          setSyncStatus(`同步失败：${error.message || "请检查 Firebase 配置"}`, "error");
         }
       }
 
@@ -1346,6 +1378,7 @@
         if (!cloudReady || applyingCloudSnapshot) return;
         entryCollection().doc(entry.id).set(entry).catch(() => {
           splitError.textContent = "云同步失败，本机已保存";
+          setSyncStatus("写入云端失败", "error");
         });
       }
 
@@ -1353,6 +1386,7 @@
         if (!cloudReady || applyingCloudSnapshot) return;
         entryCollection().doc(id).delete().catch(() => {
           splitError.textContent = "云端删除失败，请稍后重试";
+          setSyncStatus("删除云端记录失败", "error");
         });
       }
 
